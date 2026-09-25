@@ -1,0 +1,6 @@
+{
+  "name": "Legalens AI",
+  "description": "Evidence-first AI legal intelligence platform for plain-language understanding, clause breakdown, obligation tracking, and document comparison.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
