@@ -71,7 +71,7 @@ export const AskLegalens: React.FC<AskLegalensProps> = ({
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700">
-          <MessageSquareText className="h-4 w-4" />
+          <MessageSquareText className="h-4 w-4" aria-hidden="true" />
           <span>Evidence-First Legal Q&A</span>
         </div>
         <h2 className="text-xl font-bold tracking-tight text-slate-900 mt-1">
@@ -91,7 +91,12 @@ export const AskLegalens: React.FC<AskLegalensProps> = ({
           }}
           className="flex items-center gap-2"
         >
+          <label htmlFor="ask-legalens-question-input" className="sr-only">
+            Ask a question about this legal document
+          </label>
           <input
+            id="ask-legalens-question-input"
+            name="question"
             type="text"
             placeholder="e.g. Can the landlord enter without notice? What is the penalty for late rent?"
             value={inputQuestion}
@@ -101,15 +106,16 @@ export const AskLegalens: React.FC<AskLegalensProps> = ({
           />
           <button
             type="submit"
+            aria-label="Submit question to Legalens AI"
             disabled={isLoading || !inputQuestion.trim()}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-950 px-5 py-3 text-xs font-semibold text-white shadow-sm hover:bg-indigo-900 transition disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-950 px-5 py-3 text-xs font-semibold text-white shadow-sm hover:bg-indigo-900 transition disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-label="Processing question..." />
             ) : (
               <>
                 <span>Ask</span>
-                <Send className="h-3.5 w-3.5" />
+                <Send className="h-3.5 w-3.5" aria-hidden="true" />
               </>
             )}
           </button>
@@ -118,16 +124,16 @@ export const AskLegalens: React.FC<AskLegalensProps> = ({
         {/* Suggested Quick Questions */}
         <div className="space-y-1.5 pt-2 border-t border-slate-100">
           <span className="text-[11px] font-semibold text-slate-500 block">
-            Suggested Questions for this Contract:
+            Suggested High-Risk Questions:
           </span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Suggested legal questions">
             {SUGGESTED_QUESTIONS.map((sq) => (
               <button
                 key={sq}
                 type="button"
                 onClick={() => handleSubmit(sq)}
                 disabled={isLoading}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-900 transition text-left"
+                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-900 transition focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 {sq}
               </button>
@@ -136,122 +142,150 @@ export const AskLegalens: React.FC<AskLegalensProps> = ({
         </div>
       </div>
 
-      {/* Grounded Answers Stream */}
-      <div className="space-y-4">
-        {qaHistory.map((item, index) => (
-          <div
-            key={index}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 transition"
+      {/* Answer History Feed */}
+      <div className="space-y-4" role="feed" aria-label="Q&A conversation history">
+        {qaHistory.length === 0 && !isLoading && (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
+            <HelpCircle className="h-8 w-8 text-slate-400 mx-auto mb-2" aria-hidden="true" />
+            <h3 className="text-xs font-bold text-slate-700">No Questions Asked Yet</h3>
+            <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
+              Select one of the suggested questions above or type your own question to inspect grounded legal evidence.
+            </p>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-6 flex items-center justify-center gap-3 text-xs text-indigo-950 font-semibold" role="status" aria-live="polite">
+            <Loader2 className="h-5 w-5 text-indigo-700 animate-spin" aria-hidden="true" />
+            <span>Scanning contract clauses and cross-referencing citations...</span>
+          </div>
+        )}
+
+        {qaHistory.map((item, idx) => (
+          <article
+            key={idx}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2"
           >
-            {/* Question Bar */}
+            {/* Question */}
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-indigo-50 p-1.5 text-indigo-700">
-                  <HelpCircle className="h-4 w-4" />
+              <div className="flex items-start gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-900 font-bold text-xs shrink-0 mt-0.5" aria-hidden="true">
+                  Q
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">{item.question}</h3>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">{item.question}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        item.confidence === 'High'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : item.confidence === 'Medium'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      {item.confidence} Grounding Confidence
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                    item.confidence === 'High'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : item.confidence === 'Medium'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  Confidence: {item.confidence}
-                </span>
-
-                <button
-                  onClick={() => handleCopy(item, index)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
-                  title="Copy question and answer"
-                >
-                  {copiedIndex === index ? (
-                    <Check className="h-4 w-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleCopy(item, idx)}
+                aria-label="Copy Q&A answer and evidence citations"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {copiedIndex === idx ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                    <span className="text-emerald-700 font-semibold">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Answer Body */}
-            <div className="text-xs text-slate-800 leading-relaxed font-medium bg-slate-50/80 p-4 rounded-xl border border-slate-100">
-              {item.answer}
-            </div>
-
-            {/* Fact vs Interpretation Breakdown */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5 space-y-1">
-                <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-                  <FileCheck2 className="h-3.5 w-3.5 text-emerald-600" />
-                  Document Facts (Explicit Text)
-                </span>
-                <ul className="list-disc list-inside text-emerald-900 space-y-1 text-[11px]">
-                  {item.documentFacts.map((fact, fi) => (
-                    <li key={fi}>{fact}</li>
-                  ))}
-                </ul>
+            <div className="space-y-3">
+              <div className="rounded-xl bg-slate-50/80 p-3.5 text-xs text-slate-800 leading-relaxed font-normal">
+                {item.answer}
               </div>
 
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3.5 space-y-1">
-                <span className="font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                  AI Plain-Language Interpretation
-                </span>
-                <p className="text-indigo-900 text-[11px] leading-relaxed">
-                  {item.aiInterpretation}
-                </p>
-              </div>
-            </div>
+              {/* Explicit Facts vs AI Interpretation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {item.documentFacts && item.documentFacts.length > 0 && (
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                      <FileCheck2 className="h-3 w-3 text-emerald-600" aria-hidden="true" />
+                      <span>Explicit Document Facts</span>
+                    </span>
+                    <ul className="list-disc list-inside space-y-1 text-slate-700 text-[11px]">
+                      {item.documentFacts.map((fact, fIdx) => (
+                        <li key={fIdx} className="leading-snug">{fact}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-            {/* Citations / Evidence Box */}
-            {item.evidence && item.evidence.length > 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2">
-                <span className="text-[11px] font-bold text-slate-700 block">
-                  Verifiable Document Citations ({item.evidence.length})
-                </span>
-                <div className="space-y-2">
-                  {item.evidence.map((ev, ei) => (
-                    <div
-                      key={ei}
-                      className="rounded-lg bg-white p-2.5 border border-slate-200/80 text-[11px] space-y-1 font-mono"
-                    >
-                      <div className="flex items-center justify-between text-indigo-900 font-sans font-bold">
-                        <span>{ev.section}</span>
-                        <span className="text-slate-400 font-normal">Page {ev.page}</span>
+                {item.aiInterpretation && (
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-indigo-600" aria-hidden="true" />
+                      <span>Practical AI Interpretation</span>
+                    </span>
+                    <p className="text-slate-700 text-[11px] leading-snug">
+                      {item.aiInterpretation}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Exact Evidence Citations */}
+              {item.evidence && item.evidence.length > 0 && (
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900 block">
+                    Verified Citation Evidence:
+                  </span>
+                  <div className="space-y-1.5">
+                    {item.evidence.map((ev, evIdx) => (
+                      <div
+                        key={evIdx}
+                        className="rounded-lg border border-indigo-100 bg-white p-2.5 text-xs shadow-xs"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-indigo-950 mb-1">
+                          <span>{ev.section}</span>
+                          <span className="text-slate-500 font-normal">Page {ev.page}</span>
+                        </div>
+                        <p className="font-mono text-[11px] text-slate-600 italic bg-slate-50 p-2 rounded border border-slate-100">
+                          "{ev.sourceText}"
+                        </p>
                       </div>
-                      <p className="text-slate-600 italic">"{ev.sourceText}"</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Legal Consultation Suggestion */}
-            {item.reviewSuggested && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-900">
-                <Scale className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">Recommendation for Counsel: </span>
-                  {item.reviewSuggested}
+              {/* What to Ask Lawyer Advice */}
+              {item.reviewSuggested && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900 flex items-start gap-2.5">
+                  <Scale className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <span className="font-bold text-[11px] block">Recommended Legal Counsel Inquiry:</span>
+                    <p className="text-[11px] text-amber-800 mt-0.5">{item.reviewSuggested}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </article>
         ))}
-
-        {qaHistory.length === 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-500 space-y-2">
-            <MessageSquareText className="h-8 w-8 text-slate-300 mx-auto" />
-            <p className="font-bold text-slate-700">No questions asked yet</p>
-            <p>Type a question above or click one of the suggested prompts to see evidence-grounded answers.</p>
-          </div>
-        )}
       </div>
     </div>
   );

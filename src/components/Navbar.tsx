@@ -44,14 +44,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const triggerTour = onOpenJudgeTour || onStartJudgeTour || (() => {});
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
+    <header role="banner" className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
       {/* Left side: Brand or Active Doc Selector */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
+          aria-label="Return to Dashboard"
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-2.5 text-left transition hover:opacity-80 md:hidden"
+          className="flex items-center gap-2.5 text-left transition hover:opacity-80 md:hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg p-1"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-900 text-white font-bold text-sm shadow-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-900 text-white font-bold text-sm shadow-sm" aria-hidden="true">
             L
           </div>
           <span className="font-bold text-slate-900 tracking-tight">LEGALENS</span>
@@ -60,15 +62,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Document Selector Dropdown if available */}
         {availableDocuments && availableDocuments.length > 0 && onSelectDocument ? (
           <div className="hidden items-center gap-2 text-xs lg:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-slate-400 font-medium">Document:</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
+            <label htmlFor="active-document-selector" className="text-slate-500 font-medium">
+              Document:
+            </label>
             <select
+              id="active-document-selector"
+              aria-label="Select active legal document"
               value={
                 availableDocuments.find((d) => d.name === currentDocumentTitle)?.id ||
                 availableDocuments[0].id
               }
               onChange={(e) => onSelectDocument(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-w-xs truncate cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-xs truncate cursor-pointer"
             >
               {availableDocuments.map((doc) => (
                 <option key={doc.id} value={doc.id}>
@@ -78,8 +84,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </select>
           </div>
         ) : currentDocumentTitle ? (
-          <div className="hidden items-center gap-2 text-xs text-slate-500 lg:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+          <div className="hidden items-center gap-2 text-xs text-slate-500 lg:flex" role="status">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
             <span className="font-medium text-slate-700 max-w-[280px] truncate">
               {currentDocumentTitle}
             </span>
@@ -90,13 +96,18 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Middle: Global Search */}
       <div className="mx-4 hidden max-w-md flex-1 md:block">
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <label htmlFor="global-search-input" className="sr-only">
+            Search clauses, obligations, dates, or terms
+          </label>
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <input
-            type="text"
+            id="global-search-input"
+            name="search"
+            type="search"
             placeholder="Search clauses, obligations, dates, or terms..."
             value={searchQuery}
             onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-            className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
@@ -105,27 +116,32 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Explain Like I'm 15 global toggle */}
         <button
+          type="button"
           id="btn-toggle-explain15"
           onClick={onToggleExplain15}
+          aria-pressed={explain15Global}
+          aria-label="Toggle Explain Like I'm 15 plain language mode"
           title="Toggle Explain Like I'm 15 mode"
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
             explain15Global
               ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300 shadow-sm'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
-          <Sparkles className={`h-3.5 w-3.5 ${explain15Global ? 'text-amber-600 fill-amber-500' : 'text-slate-500'}`} />
+          <Sparkles className={`h-3.5 w-3.5 ${explain15Global ? 'text-amber-600 fill-amber-500' : 'text-slate-500'}`} aria-hidden="true" />
           <span className="hidden sm:inline font-semibold">Explain Like I'm 15</span>
           <span className="sm:hidden">ELI15</span>
         </button>
 
         {/* Judge Walkthrough Quick Button */}
         <button
+          type="button"
           id="btn-judge-walkthrough"
           onClick={triggerTour}
-          className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-950 to-indigo-800 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-indigo-900 hover:to-indigo-700 transition"
+          aria-label="Launch interactive Judge Walkthrough tour"
+          className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-950 to-indigo-800 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-indigo-900 hover:to-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+          <Sparkles className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
           <span>Judge Walkthrough</span>
         </button>
 
@@ -133,8 +149,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div
           title="Documents are processed ephemerally and securely. Not used for training."
           className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 xl:flex"
+          role="note"
+          aria-label="Privacy Shield Active: Documents are processed securely and ephemerally"
         >
-          <Lock className="h-3 w-3 text-emerald-600" />
+          <Lock className="h-3 w-3 text-emerald-600" aria-hidden="true" />
           <span>Privacy Shield Active</span>
         </div>
       </div>

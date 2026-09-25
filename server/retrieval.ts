@@ -56,7 +56,7 @@ export function chunkLegalDocument(
     }
   };
 
-  const sectionHeadingRegex = /^(?:SECTION\s+\d+|CLAUSE\s+\d+|\d+\.|\d+\))\s+([A-Z0-9\s,&/\-]+)/i;
+  const sectionHeadingRegex = /^(?:SECTION\s+\d+[\.:\-]?|CLAUSE\s+\d+[\.:\-]?|\d+[\.:\)]|[A-Z0-9\.\-]+\))\s+([A-Z0-9\s,&/\-]+)/i;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();

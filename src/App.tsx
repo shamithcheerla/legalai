@@ -376,6 +376,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-slate-100 font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
+      {/* Accessibility Skip Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-950 focus:text-white focus:rounded-lg focus:shadow-xl focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {/* Global Navbar */}
       <Navbar
         currentTab={currentTab}
@@ -412,124 +420,142 @@ export default function App() {
           />
 
           {/* Center Workspace Content Area */}
-          <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+          <main
+            id="main-content"
+            role="main"
+            tabIndex={-1}
+            aria-label="Legal document analysis workspace"
+            className="flex-1 overflow-y-auto bg-slate-50 relative focus:outline-none"
+          >
             {/* Toast Notification */}
             {toastMessage && (
-              <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold shadow-xl flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold shadow-xl flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-bottom-2"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
                 <span>{toastMessage}</span>
               </div>
             )}
 
-            {currentTab === 'dashboard' && (
-              <DashboardOverview
-                analysis={currentAnalysis}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-                onSelectClause={(cid) => {
-                  setSelectedClauseId(cid);
-                  setCurrentTab('viewer');
-                }}
-                onOpenJudgeTour={() => setIsJudgeTourOpen(true)}
-              />
-            )}
+            <div
+              role="tabpanel"
+              id={`panel-${currentTab}`}
+              aria-labelledby={`tab-${currentTab}`}
+              className="min-h-full"
+            >
+              {currentTab === 'dashboard' && (
+                <DashboardOverview
+                  analysis={currentAnalysis}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                  onSelectClause={(cid) => {
+                    setSelectedClauseId(cid);
+                    setCurrentTab('viewer');
+                  }}
+                  onOpenJudgeTour={() => setIsJudgeTourOpen(true)}
+                />
+              )}
 
-            {currentTab === 'viewer' && (
-              <DocumentViewer
-                analysis={currentAnalysis}
-                selectedClauseId={selectedClauseId}
-                onSelectClause={(cid) => setSelectedClauseId(cid)}
-                explain15Global={explain15Global}
-                onToggleExplain15={() => setExplain15Global(!explain15Global)}
-                onAddToActions={handleAddActionFromModule}
-              />
-            )}
+              {currentTab === 'viewer' && (
+                <DocumentViewer
+                  analysis={currentAnalysis}
+                  selectedClauseId={selectedClauseId}
+                  onSelectClause={(cid) => setSelectedClauseId(cid)}
+                  explain15Global={explain15Global}
+                  onToggleExplain15={() => setExplain15Global(!explain15Global)}
+                  onAddToActions={handleAddActionFromModule}
+                />
+              )}
 
-            {currentTab === 'xray' && (
-              <DocumentXRay
-                analysis={currentAnalysis}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-                onSelectClause={(cid) => setSelectedClauseId(cid)}
-              />
-            )}
+              {currentTab === 'xray' && (
+                <DocumentXRay
+                  analysis={currentAnalysis}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                  onSelectClause={(cid) => setSelectedClauseId(cid)}
+                />
+              )}
 
-            {currentTab === 'clauses' && (
-              <ClauseIntelligence
-                clauses={currentAnalysis.clauses}
-                docTitle={currentAnalysis.overview.title}
-                onSelectClause={(cid) => setSelectedClauseId(cid)}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-                explain15Global={explain15Global}
-                onToggleExplain15={() => setExplain15Global(!explain15Global)}
-                onAddToActions={handleAddActionFromModule}
-              />
-            )}
+              {currentTab === 'clauses' && (
+                <ClauseIntelligence
+                  clauses={currentAnalysis.clauses}
+                  docTitle={currentAnalysis.overview.title}
+                  onSelectClause={(cid) => setSelectedClauseId(cid)}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                  explain15Global={explain15Global}
+                  onToggleExplain15={() => setExplain15Global(!explain15Global)}
+                  onAddToActions={handleAddActionFromModule}
+                />
+              )}
 
-            {currentTab === 'attention' && (
-              <AttentionRadar
-                items={currentAnalysis.attentionItems}
-                docTitle={currentAnalysis.overview.title}
-                onAddToActions={handleAddActionFromModule}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-              />
-            )}
+              {currentTab === 'attention' && (
+                <AttentionRadar
+                  items={currentAnalysis.attentionItems}
+                  docTitle={currentAnalysis.overview.title}
+                  onAddToActions={handleAddActionFromModule}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                />
+              )}
 
-            {currentTab === 'obligations' && (
-              <ObligationTracker
-                obligations={currentAnalysis.obligations}
-                deadlines={currentAnalysis.deadlines}
-                onToggleComplete={handleToggleActionStatus}
-              />
-            )}
+              {currentTab === 'obligations' && (
+                <ObligationTracker
+                  obligations={currentAnalysis.obligations}
+                  deadlines={currentAnalysis.deadlines}
+                  onToggleComplete={handleToggleActionStatus}
+                />
+              )}
 
-            {currentTab === 'financials' && (
-              <FinancialView
-                items={currentAnalysis.financialItems}
-                docTitle={currentAnalysis.overview.title}
-              />
-            )}
+              {currentTab === 'financials' && (
+                <FinancialView
+                  items={currentAnalysis.financialItems}
+                  docTitle={currentAnalysis.overview.title}
+                />
+              )}
 
-            {currentTab === 'inconsistencies' && (
-              <InconsistencyAndMissing
-                inconsistencies={currentAnalysis.inconsistencies}
-                missingInformation={currentAnalysis.missingInformation}
-                onAddToActions={handleAddActionFromModule}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-              />
-            )}
+              {currentTab === 'inconsistencies' && (
+                <InconsistencyAndMissing
+                  inconsistencies={currentAnalysis.inconsistencies}
+                  missingInformation={currentAnalysis.missingInformation}
+                  onAddToActions={handleAddActionFromModule}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                />
+              )}
 
-            {currentTab === 'ask' && (
-              <AskLegalens
-                analysis={currentAnalysis}
-                onAskQuestion={handleAskQuestion}
-                onSelectClause={(cid) => setSelectedClauseId(cid)}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-              />
-            )}
+              {currentTab === 'ask' && (
+                <AskLegalens
+                  analysis={currentAnalysis}
+                  onAskQuestion={handleAskQuestion}
+                  onSelectClause={(cid) => setSelectedClauseId(cid)}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                />
+              )}
 
-            {currentTab === 'compare' && (
-              <CompareDocuments />
-            )}
+              {currentTab === 'compare' && (
+                <CompareDocuments />
+              )}
 
-            {currentTab === 'lawyer' && (
-              <PrepareLawyer
-                analysis={currentAnalysis}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-              />
-            )}
+              {currentTab === 'lawyer' && (
+                <PrepareLawyer
+                  analysis={currentAnalysis}
+                  onNavigateTab={(tab) => setCurrentTab(tab)}
+                />
+              )}
 
-            {currentTab === 'actions' && (
-              <ActionCenter
-                actionItems={actionItems}
-                onToggleStatus={handleToggleActionStatus}
-                onDeleteItem={handleDeleteAction}
-                onAddItem={handleAddCustomAction}
-                onUpdateNotes={handleUpdateActionNotes}
-              />
-            )}
+              {currentTab === 'actions' && (
+                <ActionCenter
+                  actionItems={actionItems}
+                  onToggleStatus={handleToggleActionStatus}
+                  onDeleteItem={handleDeleteAction}
+                  onAddItem={handleAddCustomAction}
+                  onUpdateNotes={handleUpdateActionNotes}
+                />
+              )}
 
-            {currentTab === 'reports' && (
-              <ReportView analysis={currentAnalysis} />
-            )}
+              {currentTab === 'reports' && (
+                <ReportView analysis={currentAnalysis} />
+              )}
+            </div>
           </main>
         </div>
       )}

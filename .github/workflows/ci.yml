@@ -1,0 +1,40 @@
+name: Legalens AI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate-and-test:
+    name: Code Quality, Security, Accessibility & Test Suites
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Code Quality & Strict Typecheck Audit
+        run: npm run lint
+
+      - name: Run Full Vitest Test Suite (Unit & Component Tests)
+        run: npm test
+
+      - name: WCAG 2.1 AA Accessibility Automated Audit
+        run: npm run test:a11y
+
+      - name: Security & Prompt Injection Protection Tests
+        run: npm run test:security
+
+      - name: Production Bundle Build Verification
+        run: npm run build
