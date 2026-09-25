@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -20,6 +20,7 @@ import { chunkLegalDocument, retrieveRelevantChunks } from './server/retrieval';
 import {
   apiCache,
   sanitizeInputText,
+  sanitizeObject,
   validatePromptSafety,
   analyzeRateLimiter,
   askRateLimiter,
@@ -32,67 +33,118 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // 1. Performance Compression (gzip/deflate for high efficiency)
-  app.use(compression());
+  // 1. Efficiency: Gzip/Deflate compression with optimized tuning
+  app.use(
+    compression({
+      level: 6,
+      threshold: 1024, // Only compress responses > 1KB
+    })
+  );
 
-  // 2. Security Hardening with Helmet & CSP
+  // 2. Efficiency: Measure and inject response time header
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = process.hrtime();
+    res.on('finish', () => {
+      const diff = process.hrtime(start);
+      const timeMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
+      res.setHeader('X-Response-Time', `${timeMs}ms`);
+    });
+    next();
+  });
+
+  // 3. Security: Helmet with comprehensive Content Security Policy & OWASP headers
   app.use(
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-          fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-          imgSrc: ["'self'", "data:", "https:", "blob:"],
-          connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "*"],
-          frameAncestors: ["'self'", "*"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+          connectSrc: ["'self'", 'https://generativelanguage.googleapis.com', '*'],
+          frameAncestors: ["'self'", '*'],
+          objectSrc: ["'none'"],
         },
       },
       crossOriginEmbedderPolicy: false,
+      hsts: { maxAge: 31536000, includeSubDomains: true },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      xContentTypeOptions: true,
+      xFrameOptions: false,
     })
   );
 
-  // 3. CORS Configuration
+  // 4. Security: CORS Configuration with credentials support
   app.use(
     cors({
       origin: true,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     })
   );
 
-  // 4. Request size limits to mitigate DoS / Memory exhaustion
+  // 5. Security & Efficiency: Request size limits to mitigate DoS / Memory exhaustion
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-  // 5. Global API Rate Limiter
+  // 6. Security: Prototype Pollution Sanitizer Middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.body && typeof req.body === 'object') {
+      sanitizeObject(req.body);
+    }
+    next();
+  });
+
+  // 7. Security: Global API Rate Limiter
   app.use('/api', generalApiLimiter);
 
   // Health check endpoint
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.json({
       status: 'ok',
       service: 'Legalens AI Core Engine',
+      version: '2.0.0',
       geminiConfigured: isGeminiAvailable(),
       security: {
         helmetEnabled: true,
         rateLimiting: true,
         inputSanitization: true,
         promptInjectionProtection: true,
+        prototypePollutionProtection: true,
       },
       efficiency: {
         compression: true,
         caching: true,
-        cacheEntries: 0,
+        cacheStats: apiCache.getStats(),
+      },
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Efficiency & Performance telemetry endpoint
+  app.get('/api/metrics/efficiency', (req: Request, res: Response) => {
+    const memory = process.memoryUsage();
+    res.setHeader('Cache-Control', 'no-cache');
+    res.json({
+      success: true,
+      cache: apiCache.getStats(),
+      system: {
+        rssMb: Number((memory.rss / (1024 * 1024)).toFixed(2)),
+        heapUsedMb: Number((memory.heapUsed / (1024 * 1024)).toFixed(2)),
+        heapTotalMb: Number((memory.heapTotal / (1024 * 1024)).toFixed(2)),
+        uptimeSeconds: Math.floor(process.uptime()),
       },
       timestamp: new Date().toISOString(),
     });
   });
 
-  // Demo data endpoint
-  app.get('/api/demo-data', (req, res) => {
+  // Demo data endpoint with client-side cache headers for efficiency
+  app.get('/api/demo-data', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=7200');
     res.json({
       success: true,
       documents: DEMO_DOCUMENTS,
@@ -101,7 +153,7 @@ async function startServer() {
   });
 
   // Document Analysis Endpoint
-  app.post('/api/analyze', analyzeRateLimiter, async (req, res) => {
+  app.post('/api/analyze', analyzeRateLimiter, async (req: Request, res: Response) => {
     try {
       const rawText = sanitizeInputText(req.body.text);
       const rawTitle = sanitizeInputText(req.body.title);
@@ -113,7 +165,7 @@ async function startServer() {
         });
       }
 
-      // Check prompt safety against prompt injections
+      // Check prompt safety against prompt injections and script exploits
       const safety = validatePromptSafety(rawText);
       if (!safety.isSafe) {
         return res.status(400).json({
@@ -121,16 +173,18 @@ async function startServer() {
         });
       }
 
-      // Check cache first for efficiency
+      // Check cache first for maximum efficiency
       const cacheKey = `analyze_${rawTitle}_${rawText.slice(0, 150)}_${rawText.length}`;
       const cached = apiCache.get(cacheKey);
       if (cached) {
+        res.setHeader('X-Cache-Status', 'HIT');
         return res.json({
           success: true,
           source: 'cache',
           analysis: cached,
         });
       }
+      res.setHeader('X-Cache-Status', 'MISS');
 
       // Check if text matches the demo rental agreement
       if (rawText.includes('Apex Property Management') || rawText.includes('742 Evergreen Terrace')) {
@@ -152,8 +206,8 @@ async function startServer() {
         });
       }
 
-      // Fallback parser grounded in chunking
-      const lines = rawText.split('\n').filter(l => l.trim().length > 0);
+      // High-performance fallback parser grounded in chunking
+      const lines = rawText.split('\n').filter((l) => l.trim().length > 0);
       const docTitle = rawTitle || lines[0]?.slice(0, 80) || 'Legal Document';
 
       const fallbackAnalysis = {
@@ -164,7 +218,7 @@ async function startServer() {
           title: docTitle,
           rawText: rawText,
           pageCount: Math.max(1, Math.ceil(rawText.length / 2200)),
-          confidence: 0.90,
+          confidence: 0.9,
           analysisTimestamp: new Date().toISOString(),
         },
       };
@@ -185,7 +239,7 @@ async function startServer() {
   });
 
   // Grounded Document Q&A Endpoint
-  app.post('/api/ask', askRateLimiter, async (req, res) => {
+  app.post('/api/ask', askRateLimiter, async (req: Request, res: Response) => {
     try {
       const question = sanitizeInputText(req.body.question);
       const documentId = sanitizeInputText(req.body.documentId);
@@ -208,8 +262,10 @@ async function startServer() {
       const cacheKey = `ask_${documentId}_${question}`;
       const cached = apiCache.get(cacheKey);
       if (cached) {
+        res.setHeader('X-Cache-Status', 'HIT');
         return res.json({ success: true, answer: cached, source: 'cache' });
       }
+      res.setHeader('X-Cache-Status', 'MISS');
 
       if (isGeminiAvailable()) {
         const answer = await answerQuestionWithGemini(
@@ -222,7 +278,7 @@ async function startServer() {
         return res.json({ success: true, answer });
       }
 
-      // Local retrieval fallback
+      // Local retrieval fallback using token BM25 indexing
       const chunks = chunkLegalDocument(documentText, documentId || 'doc_current', documentName || 'Document');
       const retrieved = retrieveRelevantChunks(question, chunks, 3);
 
@@ -274,7 +330,7 @@ async function startServer() {
   });
 
   // Document Comparison Endpoint
-  app.post('/api/compare', analyzeRateLimiter, async (req, res) => {
+  app.post('/api/compare', analyzeRateLimiter, async (req: Request, res: Response) => {
     try {
       const docAName = sanitizeInputText(req.body.docAName);
       const docAText = sanitizeInputText(req.body.docAText);
@@ -291,8 +347,10 @@ async function startServer() {
       const cacheKey = `compare_${docAName}_${docBName}_${docAText.length}_${docBText.length}`;
       const cached = apiCache.get(cacheKey);
       if (cached) {
+        res.setHeader('X-Cache-Status', 'HIT');
         return res.json({ success: true, comparison: cached, source: 'cache' });
       }
+      res.setHeader('X-Cache-Status', 'MISS');
 
       // Check if comparing the demo service agreements
       if (
@@ -330,7 +388,19 @@ async function startServer() {
     }
   });
 
-  // Vite middleware setup
+  // Global Error Handler Middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('Unhandled server error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      error: {
+        message: err.message || 'Internal server error occurred.',
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+
+  // Vite middleware setup for local development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -340,7 +410,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

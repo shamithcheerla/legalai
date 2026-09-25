@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:a11y": "vitest run tests/accessibility.test.tsx",
-    "test:security": "vitest run tests/security.test.ts"
+    "test:security": "vitest run tests/security.test.ts",
+    "test:efficiency": "vitest run tests/efficiency.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

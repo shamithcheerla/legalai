@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate-and-test:
-    name: Code Quality, Security, Accessibility & Test Suites
+    name: Code Quality, Security, Efficiency & Test Suites
     runs-on: ubuntu-latest
 
     steps:
@@ -35,6 +35,9 @@ jobs:
 
       - name: Security & Prompt Injection Protection Tests
         run: npm run test:security
+
+      - name: Efficiency, Caching & Performance Benchmark Tests
+        run: npm run test:efficiency
 
       - name: Production Bundle Build Verification
         run: npm run build
